@@ -30,16 +30,21 @@ resource "kubernetes_deployment" "nginx" {
           name  = "nginx"
           image = var.image
 
-          volume_mount {
-            name       = "config"
-            mount_path = "/etc/nginx/conf.d"
-            read_only  = true
+          env {
+            name = "CONFIGMAP_RESOURCEVERSION"
+            value = kubernetes_config_map.nginx.metadata.0.resource_version
           }
 
           volume_mount {
-            name = "certificate"
+            name       = "config"
+            mount_path = "/etc/nginx/conf.d/custom.conf"
+            sub_path    = "custom.conf"
+          }
+
+          volume_mount {
+            name       = "certificate"
             mount_path = "/etc/nginx/ssl"
-            read_only = true
+            read_only  = true
           }
 
           resources {
@@ -66,7 +71,7 @@ resource "kubernetes_deployment" "nginx" {
           name = "certificate"
 
           secret {
-            name = "ssl-certificate"
+            secret_name = "ssl-certificate"
           }
         }
       }
@@ -80,8 +85,8 @@ resource "kubernetes_config_map" "nginx" {
   }
 
   data = {
-    "default.conf" = templatefile("${path.module}/templates/default.conf", 
-                                  { service = var.backend_service })
+    "custom.conf" = templatefile("${path.module}/templates/default.conf",
+    { service = var.backend_service })
   }
 }
 
